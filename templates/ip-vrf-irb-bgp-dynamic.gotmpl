@@ -1,0 +1,247 @@
+updates:
+{{ $target := index .Vars .TargetName }}
+  - path: "/routing-policy/policy[name={{ index $target "bgp-policies" "import" }}]"
+    encoding: "json_ietf"
+    value:   
+      - default-action: {}
+        name: {{ index $target "bgp-policies" "import" }}
+        statement:
+          - action:
+              accept:
+                bgp:
+                  communities: {}
+                  local-preference:
+                    set: 100
+                  origin: {}
+            match:
+              isis: {}
+              ospf: {}
+              protocol: srl_nokia-common:local
+            sequence-id: 10
+          - action:
+              accept:
+                bgp:
+                  communities: {}
+                  local-preference:
+                    set: 100
+                  origin: {}
+            match:
+              isis: {}
+              ospf: {}
+              protocol: srl_nokia-common:bgp
+            sequence-id: 20
+          - action:
+              accept:
+                bgp:
+                  communities: {}
+                  local-preference:
+                    set: 100
+                  origin: {}
+            match:
+              isis: {}
+              ospf: {}
+              protocol: srl_nokia-common:aggregate
+            sequence-id: 30
+  - path: "/routing-policy/policy[name={{ index $target "bgp-policies" "export" }}]"
+    encoding: "json_ietf"
+    value:   
+      - default-action: {}
+        name: {{ index $target "bgp-policies" "export" }}
+        statement:
+          - action:
+              accept:
+                bgp:
+                  communities: {}
+                  local-preference:
+                    set: 100
+                  origin: {}
+            match:
+              isis: {}
+              ospf: {}
+              protocol: srl_nokia-common:bgp
+            sequence-id: 20
+{{- range $interface := index $target "interfaces" }}
+  - path: "/interface[name={{ index $interface "name" }}]"  
+    encoding: "json_ietf"
+    value: 
+      admin-state: {{ index $interface "admin-state" | default "disable" }}
+      description: {{ index $interface "description" | default "" }}
+    {{- range $index, $subinterface := index $interface "subinterfaces" }}
+      subinterface:
+        - index: {{ $index }}
+          {{- if has $subinterface "type" }}
+          type: {{ index $subinterface "type" }}
+          {{- end }}
+          admin-state: {{ index $subinterface "admin-state" | default "disable" }}
+          {{- if has $subinterface "ipv4-address"  }}
+          ipv4:
+            address:
+              - ip-prefix: {{ index $subinterface "ipv4-address" }}
+                anycast-gw: true
+            arp:
+              evpn:
+                advertise:
+                  - route-type: static
+                  - route-type: dynamic
+          {{- end }}
+          {{- if has $subinterface "ipv6-address"  }}
+          ipv6:
+            address:
+              - ip-prefix: {{ index $subinterface "ipv6-address" }}
+                anycast-gw: true
+            neighbor-discovery:
+              evpn:
+                advertise:
+                  - route-type: static
+                  - route-type: dynamic 
+          {{- end }}
+          anycast-gw:
+            virtual-router-id: 1
+          {{- if has $subinterface "mac-vrf" }}
+  - path: "/network-instance[name={{index $subinterface "mac-vrf" }}]"
+    encoding: "json_ietf"
+    value: 
+       interface:
+         - name: {{ index $interface "name" }}.{{ $index }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- $tuninterface := index $target "tunnel-interface" }}
+  - path: "/tunnel-interface[name={{index $tuninterface "name" }}]"
+    encoding: "json_ietf"
+    value: 
+      vxlan-interface:
+        - index: {{index $tuninterface "vni" }}
+          type:  {{index $tuninterface "type" }}
+          ingress:
+             vni: {{index $tuninterface "vni" }}
+          egress:
+             source-ip: use-system-ipv4-address
+{{- $instance := index $target "network-instance" }}
+  - path: "/network-instance[name={{index $instance "name" }}]"
+    encoding: "json_ietf"
+    value: 
+       type: {{index $instance "type" }}
+       admin-state: {{index $instance "admin-state" }}
+       interface:
+       {{- range $interface := index $target "interfaces" }}
+           {{- range $index, $subinterface := index $interface "subinterfaces" }}
+          - name: {{ index $interface "name" }}.{{ $index }}
+           {{- end }}
+       {{- end}}
+       vxlan-interface:
+          - name: {{index $instance "vxlan-interface" }}
+       router-id: {{ index $instance "router-id" }} 
+       protocols:
+         bgp-evpn:
+           bgp-instance:
+             - id: 1
+               admin-state: enable
+               vxlan-interface: {{index $instance "vxlan-interface" }}
+               ecmp:  {{index $instance "ecmp" }}
+               evi: {{index $instance "evi" }}
+         bgp-vpn:
+           bgp-instance:
+             - id: 1
+               {{- if index $instance "rd"  }}
+               route-distinguisher:
+                 rd: {{index $instance "rd" }}
+               {{- end }} 
+               route-target:
+                 export-rt: {{index $instance "rt" }}
+                 import-rt: {{index $instance "rt" }}
+         bgp:
+           admin-state: enable
+           as-path-options:
+             allow-own-as: 0
+             remove-private-as:
+               ignore-peer-as: false
+               leading-only: false
+               mode: disabled
+           authentication: {}
+           autonomous-system: {{ index $instance "bgp" "autonomous-system" }} 
+           convergence:
+             min-wait-to-advertise: 0
+           ebgp-default-policy:
+             export-reject-all: true
+             import-reject-all: true
+           evpn:
+             admin-state: disable
+             advertise-ipv6-next-hops: false
+             rapid-update: false
+           failure-detection:
+             enable-bfd: false
+             fast-failover: true
+           graceful-restart:
+             admin-state: disable
+             stale-routes-time: 360
+           ipv4-unicast:
+             admin-state: enable
+             advertise-ipv6-next-hops: false
+             convergence:
+               max-wait-to-advertise: 0
+             multipath:
+               allow-multiple-as: true
+               max-paths-level-1: 1
+               max-paths-level-2: 1
+             receive-ipv6-next-hops: false
+           ipv6-unicast:
+             admin-state: enable
+             convergence:
+               max-wait-to-advertise: 0
+             multipath:
+               allow-multiple-as: true
+               max-paths-level-1: 1
+               max-paths-level-2: 1
+           local-preference: 100
+           preference:
+             ebgp: 170
+             ibgp: 170
+           route-advertisement:
+             rapid-withdrawal: false
+             wait-for-fib-install: true
+           route-reflector:
+             client: false
+           router-id: {{ index $instance "router-id" }} 
+           send-community:
+             large: true
+             standard: true
+           trace-options: {}
+           transport:
+             tcp-mss: 1024
+           dynamic-neighbors:
+             accept:
+               match:
+               {{- range $dneigh := index $instance "bgp" "dynamic-neighbors" }}
+                 - allowed-peer-as:
+                     - {{index $dneigh "allowed-peer-as" }}
+                   peer-group: {{index $dneigh "peer-group" }}
+                   prefix: {{index $dneigh "prefix" }}
+               {{- end }}
+               max-sessions: 0
+           group:
+            {{- range $group := index $instance "bgp" "group" }}
+             - admin-state: enable
+               as-path-options: {}
+               authentication: {}
+               description: BGP PE-CE
+               export-policy: {{index $group "export-policy"}}
+               failure-detection: {}
+               graceful-restart: {}
+               group-name: {{index $group "group-name"}}
+               import-policy: {{index $group "import-policy"}}
+               next-hop-self: false
+               route-reflector: {}
+               send-community: {}
+               send-default-route:
+                 ipv4-unicast: false
+                 ipv6-unicast: false
+               timers:
+                 connect-retry: 10
+                 hold-time: 9
+                 keepalive-interval: 3
+                 minimum-advertisement-interval: 1
+               trace-options: {}
+               transport:
+                 passive-mode: false
+               {{- end }}

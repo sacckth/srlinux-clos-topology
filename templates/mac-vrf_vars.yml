@@ -1,0 +1,80 @@
+clab-clos_fab-leaf1:57400:
+  interfaces:
+    - name: ethernet-1/3
+      admin-state: "enable"
+      description: "leaf1_to_linux_c1"
+      subinterfaces:
+        - admin-state: enable
+          vlan-id: 0
+          type: bridged
+  tunnel-interface: 
+    name: vxlan0
+    type: bridged
+    vni: 111
+  network-instance:
+    name: L3_WORKLOAD_BD1
+    type: mac-vrf
+    admin-state: enable
+    ecmp: 8
+    rt: "target:111:1"
+    evi: 111
+clab-clos_fab-leaf2:57400:
+  interfaces:
+    - name: ethernet-1/3
+      admin-state: "enable"
+      description: "leaf2_to_linux_c2"
+      subinterfaces:
+        - admin-state: enable
+          vlan-id: 0
+          type: bridged
+  tunnel-interface: 
+    name: vxlan0
+    type: bridged
+    vni: 2233
+  network-instance:
+    name: L2_WORKLOAD
+    type: mac-vrf
+    admin-state: enable
+    ecmp: 8
+    rt: "target:2233:1"
+    evi: 2233
+clab-clos_fab-leaf3:57400:
+  interfaces:
+    - name: ethernet-1/3
+      admin-state: "enable"
+      description: "leaf3_to_linux_c3"
+      subinterfaces:
+        - admin-state: enable
+          vlan-id: 0
+          type: bridged
+  tunnel-interface: 
+    name: vxlan0
+    type: bridged
+    vni: 2233
+  network-instance:
+    name: L2_WORKLOAD
+    type: mac-vrf
+    admin-state: enable
+    ecmp: 8
+    rt: "target:2233:1"
+    evi: 2233
+clab-clos_fab-leaf4:57400:
+  interfaces:
+    - name: ethernet-1/3
+      admin-state: "enable"
+      description: "leaf4_to_linux_c4"
+      subinterfaces:
+        - admin-state: enable
+          vlan-id: 0
+          type: bridged
+  tunnel-interface: 
+    name: vxlan0
+    type: bridged
+    vni: 444
+  network-instance:
+    name: L3_WORKLOAD_BD4
+    type: mac-vrf
+    admin-state: enable
+    ecmp: 8
+    rt: "target:444:1"
+    evi: 444

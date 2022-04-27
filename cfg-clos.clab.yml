@@ -1,0 +1,170 @@
+### 4 Leaf - 2 Spine
+name: clos_fab
+mgmt:
+  network: clab_net
+  ipv4_subnet: 172.100.201.0/24
+######### Global Variables for Config Engine #########
+topology:
+  defaults:
+    config:
+      vars:
+        overlay_as: 4200000000
+  #----------------------------------------------------#
+  kinds:
+    srl:
+      image: ghcr.io/nokia/srlinux:latest
+    linux:
+      image: archlinux:latest
+  #######################################################
+  nodes:
+    #-----------------------------------------------------#
+    spine1:
+      kind: srl
+      group: spine
+      type: ixrd3
+      mgmt_ipv4: 172.100.201.21
+      config:
+        vars:
+          system_ip: 10.0.0.21
+          as: 4200001100
+          cluster_id: 10.10.10.10
+    #-----------------------------------------------------#
+    spine2:
+      kind: srl
+      group: spine
+      type: ixrd3
+      mgmt_ipv4: 172.100.201.22
+      config:
+        vars:
+          system_ip: 10.0.0.22
+          as: 4200001100
+          cluster_id: 10.10.10.10
+    #-----------------------------------------------------#
+    leaf1:
+      kind: srl
+      group: leaf
+      type: ixrd2
+      mgmt_ipv4: 172.100.201.11
+      config:
+        vars:
+          system_ip: 10.0.0.11
+          as: 4200002001
+    #-----------------------------------------------------#
+    leaf2:
+      kind: srl
+      group: leaf
+      type: ixrd2
+      mgmt_ipv4: 172.100.201.12
+      config:
+        vars:
+          system_ip: 10.0.0.12
+          as: 4200002002
+    #-----------------------------------------------------#
+    leaf3:
+      kind: srl
+      group: leaf
+      type: ixrd2
+      mgmt_ipv4: 172.100.201.13
+      config:
+        vars:
+          system_ip: 10.0.0.13
+          as: 4200002003
+    #-----------------------------------------------------#
+    leaf4:
+      kind: srl
+      group: leaf
+      type: ixrd2
+      mgmt_ipv4: 172.100.201.14
+      config:
+        vars:
+          system_ip: 10.0.0.14
+          as: 4200002004
+    #-----------------------------------------------------#
+    client1:
+      kind: linux
+      exec:
+        - ip address add 192.168.10.10/24 dev eth1
+        - ip link set dev eth1 up
+        - ip route add 192.168.0.0/16 via 192.168.10.1 
+    client2:
+      kind: linux
+      exec:
+        - ip address add 192.168.23.2/24 dev eth1
+        - ip link set dev eth1 up
+        - ip route add 192.168.0.0/16 via 192.168.23.1
+    client3:
+      kind: linux
+      exec:
+        - ip address add 192.168.23.3/24 dev eth1
+        - ip link set dev eth1 up
+        - ip route add 192.168.0.0/16 via 192.168.23.1
+    client4:
+      kind: linux
+      exec:
+        - ip address add 192.168.40.10/24 dev eth1
+        - ip link set dev eth1 up
+        - ip route add 192.168.0.0/16 via 192.168.40.1 
+  links:
+    #######################################################
+    ################## Spine 1 - Leafs ####################
+    #######################################################
+    - endpoints: ["spine1:e1-11", "leaf1:e1-51"]
+      vars:
+        port: [ethernet-1/11, ethernet-1/51]
+        clab_link_ip: 100.64.11.1/30
+        bgp_underlay: true
+    #-----------------------------------------------------#
+    - endpoints: ["spine1:e1-12", "leaf2:e1-51"]
+      vars:
+        port: [ethernet-1/12, ethernet-1/51]
+        clab_link_ip: 100.64.12.1/30
+        bgp_underlay: true
+    #-----------------------------------------------------#
+    - endpoints: ["spine1:e1-13", "leaf3:e1-51"]
+      vars:
+        port: [ethernet-1/13, ethernet-1/51]
+        clab_link_ip: 100.64.13.1/30
+        bgp_underlay: true
+    #-----------------------------------------------------#
+    - endpoints: ["spine1:e1-14", "leaf4:e1-51"]
+      vars:
+        port: [ethernet-1/14, ethernet-1/51]
+        clab_link_ip: 100.64.14.1/30
+        bgp_underlay: true
+    #-----------------------------------------------------#
+
+    #######################################################
+    ################## Spine 2 - Leafs ####################
+    #######################################################
+    - endpoints: ["spine2:e1-11", "leaf1:e1-52"]
+      vars:
+        port: [ethernet-1/11, ethernet-1/52]
+        clab_link_ip: 100.64.15.1/30
+        bgp_underlay: true
+    #-----------------------------------------------------#
+    - endpoints: ["spine2:e1-12", "leaf2:e1-52"]
+      vars:
+        port: [ethernet-1/12, ethernet-1/52]
+        clab_link_ip: 100.64.16.1/30
+        bgp_underlay: true
+    #-----------------------------------------------------#
+    - endpoints: ["spine2:e1-13", "leaf3:e1-52"]
+      vars:
+        port: [ethernet-1/13, ethernet-1/52]
+        clab_link_ip: 100.64.17.1/30
+        bgp_underlay: true
+    #-----------------------------------------------------#
+    - endpoints: ["spine2:e1-14", "leaf4:e1-52"]
+      vars:
+        port: [ethernet-1/14, ethernet-1/52]
+        clab_link_ip: 100.64.18.1/30
+        bgp_underlay: true
+    #-----------------------------------------------------#
+ 
+    #######################################################
+    ################ Leaf - Client/Host ###################
+    #######################################################
+    - endpoints: ["leaf1:e1-3", "client1:eth1"]
+    - endpoints: ["leaf2:e1-3", "client2:eth1"]
+    - endpoints: ["leaf3:e1-3", "client3:eth1"]
+    - endpoints: ["leaf4:e1-3", "client4:eth1"]

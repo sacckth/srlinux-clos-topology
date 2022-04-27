@@ -1,0 +1,69 @@
+updates:
+{{ $target := index .Vars .TargetName }}
+{{- range $interface := index $target "interfaces" }}
+  - path: "/interface[name={{ index $interface "name" }}]"  
+    encoding: "json_ietf"
+    value: 
+      admin-state: {{ index $interface "admin-state" | default "disable" }}
+      description: {{ index $interface "description" | default "" }}
+      vlan-tagging: true
+    {{- range $index, $subinterface := index $interface "subinterfaces" }}
+      subinterface:
+        - index: {{ $index }}
+          type: {{ index $subinterface "type" }}
+          admin-state: {{ index $subinterface "admin-state" | default "disable" }}
+          {{$vlanId :=  index $subinterface "vlan-id" | default 0}} 
+          vlan:
+            encap:
+              {{- if eq  $vlanId 0 }}
+              untagged: {}
+              {{- else }}
+              single-tagged:
+                vlan-id: {{ $vlanId }}
+              {{- end }}
+          {{- if has $subinterface "l2-mtu" }}
+          l2-mtu: {{ index $subinterface "l2-mtu" }}
+          {{- end }}
+    {{- end }}
+  - path: "/tunnel-interface[name={{index $target "tunnel-interface" "name" }}]"
+    encoding: "json_ietf"
+    value: 
+      vxlan-interface:
+        - index: {{index $target "tunnel-interface" "vni" }}
+          type:  {{index $target "tunnel-interface" "type" }}
+          ingress:
+             vni: {{index $target "tunnel-interface" "vni" }}
+          egress:
+             source-ip: use-system-ipv4-address
+  - path: "/network-instance[name={{index $target "network-instance" "name" }}]"
+    encoding: "json_ietf"
+    value: 
+       type: {{index $target "network-instance" "type" }}
+       admin-state: {{index $target "network-instance" "admin-state" }}
+       interface:
+       {{- range $interface := index $target "interfaces" }}
+           {{- range $index, $subinterface := index $interface "subinterfaces" }}
+          - name: {{ index $interface "name" }}.{{ $index }}
+           {{- end }}
+       {{- end}}
+       vxlan-interface:
+          - name: {{index $target "tunnel-interface" "name" }}.{{index $target "tunnel-interface" "vni" }}
+       protocols:
+         bgp-evpn:
+           bgp-instance:
+             - id: 1
+               admin-state: enable
+               vxlan-interface: {{index $target "tunnel-interface" "name" }}.{{index $target "tunnel-interface" "vni" }}
+               ecmp:  {{index $target "network-instance" "ecmp" }}
+               evi: {{index $target "network-instance" "evi" }}
+         bgp-vpn:
+           bgp-instance:
+             - id: 1
+               {{- if index $target "network-instance" "rd"  }}
+               route-distinguisher:
+                 rd: {{index $target "network-instance" "rd" }}
+               {{- end }}
+               route-target:
+                 export-rt: {{index $target "network-instance" "rt" }}
+                 import-rt: {{index $target "network-instance" "rt" }}
+      {{- end }}

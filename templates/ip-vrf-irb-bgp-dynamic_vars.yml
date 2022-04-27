@@ -1,0 +1,78 @@
+clab-clos_fab-leaf1:57400:
+  bgp-policies:
+    import: bgp_import_policy_default
+    export: bgp_export_policy_default
+  interfaces:
+    - name: irb0
+      admin-state: "enable"
+      description: "irb0"
+      subinterfaces:
+        - admin-state: enable
+          ipv4-address: 192.168.10.1/24
+          ipv6-address: 2001:1:1::1/64
+          mac-vrf: L3_WORKLOAD_BD1
+  tunnel-interface: 
+    name: vxlan0
+    type: routed
+    vni: 1144
+  network-instance:
+    name: L3WORKLOAD
+    type: ip-vrf
+    admin-state: enable
+    ecmp: 8
+    rt: "target:1144:1"
+    evi: 1144
+    vxlan-interface: vxlan0.1144
+    router-id: 1.1.0.1
+    bgp: 
+       autonomous-system: 65100
+       group: 
+         - group-name: pe-ce
+           import-policy: bgp_import_policy_default
+           export-policy: bgp_export_policy_default
+       dynamic-neighbors:
+         - allowed-peer-as: 65200..65500
+           peer-group: pe-ce
+           prefix: 1.1.0.0/24
+         - allowed-peer-as: 65200..65500
+           peer-group: pe-ce
+           prefix: 2001:1:1::/64
+clab-clos_fab-leaf4:57400:
+  bgp-policies:
+    import: bgp_import_policy_default
+    export: bgp_export_policy_default
+  interfaces:
+    - name: irb0
+      admin-state: "enable"
+      description: "irb0"
+      subinterfaces:
+        - admin-state: enable
+          ipv4-address: 192.168.40.1/24
+          ipv6-address: 2001:4:4::1/64
+          mac-vrf: L3_WORKLOAD_BD4
+  tunnel-interface: 
+    name: vxlan0
+    type: routed
+    vni: 1144
+  network-instance:
+    name: L3WORKLOAD
+    type: ip-vrf
+    admin-state: enable
+    ecmp: 8
+    rt: "target:1144:1"
+    evi: 1144
+    vxlan-interface: vxlan0.1144
+    router-id: 4.4.0.1
+    bgp: 
+       autonomous-system: 65100
+       group: 
+         - group-name: pe-ce
+           import-policy: bgp_import_policy_default
+           export-policy: bgp_export_policy_default
+       dynamic-neighbors:
+         - allowed-peer-as: 65200..65500
+           peer-group: pe-ce
+           prefix: 4.4.0.0/24
+         - allowed-peer-as: 65200..65500
+           peer-group: pe-ce
+           prefix: 2001:4:4::/64

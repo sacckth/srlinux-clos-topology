@@ -1,0 +1,223 @@
+srl_nokia-interfaces:interface:
+  - name: {{interface}}
+    subinterface:
+{%for vlanId in range(vlanRange[0],vlanRange[1]+1,1) %}
+      - index: {{vlanId}}
+        type: bridged
+        vlan:
+          encap:
+            single-tagged:
+              vlan-id: {{vlanId}}
+{% endfor %}
+  - name: {{irb}}
+    subinterface:
+{%for vlanId in range(vlanRange[0],vlanRange[1]+1,1) %}
+      - admin-state: enable
+        index: {{vlanId}}
+        {% if ipMtu is defined %}
+        ip-mtu: {{ipMtu}}
+        {% endif %}
+        {% if ipv4Addr is defined %}
+        ipv4:
+          address:
+            - ip-prefix: {{ipv4Addr}}
+              {% if anycastv4 is defined  %}
+              anycast-gw: {{anycastv4}}
+              {% endif %}
+          arp:
+            evpn:
+              advertise:
+                - route-type: static
+                - route-type: dynamic
+        {% endif %}
+        {%if ipv6Addr is defined %}
+        ipv6:
+          address:
+            - ip-prefix: {{ipv6Addr}}
+              {% if anycastv6 is defined %}
+              anycast-gw: {{anycastv6}}
+              {% endif %}
+          neighbor-discovery:
+            evpn:
+              advertise:
+                - route-type: static
+                - route-type: dynamic 
+        {%endif%}
+        {% if anycastv4 is defined or anycastv6 is defined %}
+        anycast-gw:
+          virtual-router-id: 1
+        {%endif %}
+{% endfor %}
+srl_nokia-network-instance:network-instance:
+{%for vlanId in range(vlanRange[0],vlanRange[1]+1,1) %}
+  {% set netInst = netInstPref + '-' +  vlanId| string %}
+  {% set macVrf = irbInstPref + '-' + +  vlanId| string %}
+  {% set macVrfIdx = 10000 +  vlanId| int %}
+  - name: {{netInst}}
+    admin-state: enable
+    type: srl_nokia-network-instance:ip-vrf
+    interface:
+      - name: {{irb}}.{{vlanId}}
+    vxlan-interface:
+      - name: vxlan0.{{vlanId}}
+    protocols:
+      bgp-evpn:
+        bgp-instance:
+          - id: 1
+            vxlan-interface: vxlan0.{{vlanId}}
+            evi: {{vlanId}}
+            ecmp: 8
+      bgp-vpn:
+        bgp-instance:
+          - id: 1
+            route-distinguisher:
+              rd: {{rdIndex}}:{{vlanId}}
+            route-target:
+              export-rt: target:{{vlanId}}:{{vlanId}}
+              import-rt: target:{{vlanId}}:{{vlanId}}
+      srl_nokia-bgp:bgp:
+        admin-state: enable
+        as-path-options:
+          allow-own-as: 0
+          remove-private-as:
+            ignore-peer-as: false
+            leading-only: false
+            mode: disabled
+        authentication: {}
+        autonomous-system: {{as}}
+        convergence:
+          min-wait-to-advertise: 0
+        dynamic-neighbors:
+          accept:
+            match:
+            {%for pref, p in bgp.items() %}
+              - allowed-peer-as:
+                  - {{p.peerAs}}
+                peer-group: {{p.peerGroup}}
+                prefix: {{pref}}
+            {% endfor %}  
+            max-sessions: 0
+        ebgp-default-policy:
+          export-reject-all: true
+          import-reject-all: true
+        evpn:
+          admin-state: disable
+          advertise-ipv6-next-hops: false
+          rapid-update: false
+        failure-detection:
+          enable-bfd: false
+          fast-failover: true
+        graceful-restart:
+          admin-state: disable
+          stale-routes-time: 360
+        group:
+          - admin-state: enable
+            as-path-options: {}
+            authentication: {}
+            description: BGP PE-CE
+            evpn:
+              prefix-limit:
+                max-received-routes: 4294967295
+                warning-threshold-pct: 90
+            export-policy: bgp_export_policy_default
+            failure-detection: {}
+            graceful-restart: {}
+            group-name: {{peerGroup}}
+            import-policy: bgp_import_policy_default
+            ipv4-unicast:
+              prefix-limit:
+                max-received-routes: 4294967295
+                warning-threshold-pct: 90
+            ipv6-unicast:
+              prefix-limit:
+                max-received-routes: 4294967295
+                warning-threshold-pct: 90
+            next-hop-self: false
+            route-reflector: {}
+            send-community: {}
+            send-default-route:
+              ipv4-unicast: false
+              ipv6-unicast: false
+            timers:
+              connect-retry: 10
+              hold-time: 9
+              keepalive-interval: 3
+              minimum-advertisement-interval: 1
+            trace-options: {}
+            transport:
+              passive-mode: false
+        ipv4-unicast:
+          admin-state: enable
+          advertise-ipv6-next-hops: false
+          convergence:
+            max-wait-to-advertise: 0
+          multipath:
+            allow-multiple-as: true
+            max-paths-level-1: 1
+            max-paths-level-2: 1
+          receive-ipv6-next-hops: false
+        ipv6-unicast:
+          admin-state: enable
+          convergence:
+            max-wait-to-advertise: 0
+          multipath:
+            allow-multiple-as: true
+            max-paths-level-1: 1
+            max-paths-level-2: 1
+        local-preference: 100
+        preference:
+          ebgp: 170
+          ibgp: 170
+        route-advertisement:
+          rapid-withdrawal: false
+          wait-for-fib-install: true
+        route-reflector:
+          client: false
+        router-id: {{routerId}}
+        send-community:
+          large: true
+          standard: true
+        trace-options: {}
+        transport:
+          tcp-mss: 1024
+  - name: {{macVrf}}
+    type: mac-vrf
+    interface:
+      - name: {{irb}}.{{vlanId}}
+      - name: {{interface}}.{{vlanId}}
+    vxlan-interface:
+      - name: vxlan0.{{macVrfIdx}}
+    protocols:
+      bgp-evpn:
+        bgp-instance:
+          - id: 1
+            vxlan-interface: vxlan0.{{macVrfIdx}}
+            evi: {{macVrfIdx}}
+            ecmp: 8
+      bgp-vpn:
+        bgp-instance:
+          - id: 1
+            route-distinguisher:
+              rd: {{rdIndex}}:{{macVrfIdx}}
+            route-target:
+              export-rt: target:{{macVrfIdx}}:{{macVrfIdx}}
+              import-rt: target:{{macVrfIdx}}:{{macVrfIdx}}
+{% endfor %}
+tunnel-interface:
+  - name: vxlan0
+    vxlan-interface:
+{%for vlanId in range(vlanRange[0],vlanRange[1]+1,1) %}
+{% set macVrfIdx = 10000 +  vlanId| int %}
+      - index: {{vlanId}}
+        type: routed
+        ingress:
+          vni: {{vlanId}}
+        egress:
+          source-ip: use-system-ipv4-address
+      - index: {{macVrfIdx}}
+        type: bridged
+        ingress:
+          vni: {{macVrfIdx}}
+        egress:
+          source-ip: use-system-ipv4-address
+{% endfor %}

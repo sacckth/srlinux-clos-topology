@@ -1,0 +1,13 @@
+deletes:
+{{ $target := index .Vars .TargetName }}
+{{- $tuninterface := index $target "tunnel-interface" }}
+{{- range $interface := index $target "interfaces" }}
+  - "/interface[name={{ index $interface "name" }}]"  
+  - "/tunnel-interface[name={{index $target "tunnel-interface" "name" }}]/vxlan-interface[index={{index $tuninterface "vni" }}]"
+  - "/network-instance[name={{index $target "network-instance" "name" }}]"
+  {{- range $index, $subinterface := index $interface "subinterfaces" }}
+  - "/network-instance[name={{index $subinterface "mac-vrf" }}]/interface[name={{index $interface "name"}}.{{$index}}]"
+  {{- end }}
+  - "/routing-policy/policy[name={{ index $target "bgp-policies" "import" }}]"
+  - "/routing-policy/policy[name={{ index $target "bgp-policies" "export" }}]"
+{{- end }}

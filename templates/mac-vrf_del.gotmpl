@@ -1,0 +1,8 @@
+deletes:
+{{ $target := index .Vars .TargetName }}
+{{- $tuninterface := index $target "tunnel-interface" }}
+{{- range $interface := index $target "interfaces" }}
+  - "/interface[name={{ index $interface "name" }}]"  
+  - "/tunnel-interface[name={{index $target "tunnel-interface" "name" }}]/vxlan-interface[index={{index $tuninterface "vni" }}]"
+  - "/network-instance[name={{index $target "network-instance" "name" }}]"
+{{- end }}
